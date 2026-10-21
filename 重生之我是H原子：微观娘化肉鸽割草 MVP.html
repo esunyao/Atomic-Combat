@@ -1,0 +1,1821 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>重生之我是H原子：微观娘化肉鸽割草 MVP</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', 'Noto Sans SC', sans-serif;
+      background-color: #060814;
+      color: #f8fafc;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      touch-action: none;
+    }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    .neon-border-cyan {
+      box-shadow: 0 0 15px rgba(34, 211, 238, 0.35), inset 0 0 10px rgba(34, 211, 238, 0.15);
+      border-color: rgba(34, 211, 238, 0.6);
+    }
+    .neon-border-amber {
+      box-shadow: 0 0 18px rgba(251, 191, 36, 0.4), inset 0 0 10px rgba(251, 191, 36, 0.2);
+      border-color: rgba(251, 191, 36, 0.7);
+    }
+    .neon-border-emerald {
+      box-shadow: 0 0 18px rgba(52, 211, 153, 0.45), inset 0 0 10px rgba(52, 211, 153, 0.2);
+      border-color: rgba(52, 211, 153, 0.75);
+    }
+    @keyframes pulse-fast {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+    }
+    .animate-pulse-fast {
+      animation: pulse-fast 1.1s infinite ease-in-out;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(56, 189, 248, 0.4);
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="w-screen h-screen flex flex-col bg-slate-950 text-slate-100 overflow-hidden">
+
+  <!-- Top HUD Header -->
+  <header class="glass-panel z-20 px-3 py-2 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 shrink-0">
+    <!-- Left: Stage Switcher & Identity -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <div class="flex items-center gap-1.5 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-cyan-500/40">
+        <span id="playerAvatarBadge" class="w-6 h-6 rounded-full bg-cyan-500/30 border border-cyan-400 flex items-center justify-center text-xs font-black text-cyan-200">H</span>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span id="playerStateName" class="font-bold text-xs sm:text-sm text-cyan-300">孤狼氢原子 (H)</span>
+            <span id="playerBondTag" class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700/50">1p⁺ 1e⁻</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage Selector Tabs (Playable progression or instant testing) -->
+      <div class="flex items-center bg-slate-900/90 p-0.5 rounded-lg border border-slate-700/70 text-xs">
+        <button id="btnStage1" class="px-2 py-1 rounded-md font-semibold transition-all bg-cyan-600 text-white shadow">
+          ① 化学贴贴
+        </button>
+        <button id="btnStage2" class="px-2 py-1 rounded-md font-semibold transition-all text-slate-300 hover:text-white">
+          ② 恒星聚变
+        </button>
+        <button id="btnStage3" class="px-2 py-1 rounded-md font-semibold transition-all text-slate-300 hover:text-white">
+          ③ 铀娘链式割草
+        </button>
+      </div>
+    </div>
+
+    <!-- Center: Progress & Energy Metrics -->
+    <div class="flex items-center gap-3 flex-1 max-w-md min-w-[200px]">
+      <div class="flex-1">
+        <div class="flex justify-between text-[11px] mb-0.5 font-medium">
+          <span id="stageObjectiveLabel" class="text-cyan-300 truncate">目标：厚乳H原子 & 勾搭氧娘合成水(H₂O)</span>
+          <span id="expText" class="text-slate-300 font-mono">Lv.1 (0/100)</span>
+        </div>
+        <div class="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-700/80 p-0.5">
+          <div id="expBar" class="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 rounded-full transition-all duration-200" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Stats & Utility Controls -->
+    <div class="flex items-center gap-1.5 sm:gap-2">
+      <div class="bg-slate-900/90 px-2.5 py-1 rounded-lg border border-amber-500/30 text-right">
+        <div class="text-[10px] text-slate-400 leading-none">总释放能量</div>
+        <div id="energyCounter" class="text-xs sm:text-sm font-black font-mono text-amber-400">0 eV</div>
+      </div>
+
+      <div class="bg-slate-900/90 px-2.5 py-1 rounded-lg border border-sky-500/30 text-right hidden sm:block">
+        <div class="text-[10px] text-slate-400 leading-none">重水慢化储备 (D₂O)</div>
+        <div id="waterCounter" class="text-xs sm:text-sm font-black font-mono text-sky-400">3 团</div>
+      </div>
+
+      <button id="btnCodex" class="px-2.5 py-1.5 rounded-lg bg-indigo-950/90 hover:bg-indigo-900 text-indigo-200 border border-indigo-500/40 text-xs font-semibold transition flex items-center gap-1">
+        <span>📖</span><span class="hidden md:inline">周期娘图鉴</span>
+      </button>
+
+      <button id="btnSound" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 text-xs font-semibold transition" title="音效开关">
+        🔊 音效
+      </button>
+
+      <button id="btnPause" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 text-xs font-semibold transition">
+        ⏸ 暂停
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Interactive Viewport -->
+  <main class="relative flex-1 w-full overflow-hidden flex">
+    <!-- Canvas Container -->
+    <div id="canvasContainer" class="relative flex-1 h-full w-full overflow-hidden">
+      <canvas id="gameCanvas"></canvas>
+
+      <!-- Top-Left Live Physics & Build Status Overlay -->
+      <div class="absolute top-3 left-3 z-10 pointer-events-none flex flex-col gap-2 max-w-xs sm:max-w-sm">
+        <!-- Stage Banner Card -->
+        <div id="stageInfoCard" class="glass-panel rounded-xl p-3 border-l-4 border-l-cyan-400 shadow-lg">
+          <div class="flex items-center justify-between gap-2">
+            <span id="stageBadge" class="text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300">STAGE 1 · 化学人生</span>
+            <span id="comboCounter" class="text-xs font-black font-mono text-amber-300 hidden">链式连击 x1</span>
+          </div>
+          <h2 id="stageTitle" class="text-sm sm:text-base font-black text-white mt-1">新手村：共享电子大乱斗</h2>
+          <p id="stageDesc" class="text-xs text-slate-300 mt-0.5 leading-relaxed">
+            移动靠近其他 <span class="text-cyan-300 font-semibold">H原子</span> 厚乳合体成 <span class="text-cyan-200 font-semibold">H₂</span>，勾搭 <span class="text-sky-300 font-semibold">氧娘(O)</span> 玩“二女侍一夫”合成 <span class="text-sky-200 font-semibold">水(H₂O)</span> 为后期核裂变攒慢化剂！
+          </p>
+        </div>
+
+        <!-- Stage 2 Specific: Iron Peak Wall & Supernova Charge Bar -->
+        <div id="ironWallPanel" class="glass-panel rounded-xl p-2.5 border border-amber-500/60 hidden pointer-events-auto">
+          <div class="flex items-center justify-between text-xs font-bold text-amber-300 mb-1">
+            <span>⚠️ 铁峰顶之墙 (Fe-56)：聚变开始倒贴能量！</span>
+            <span id="supernovaPct" class="font-mono">0%</span>
+          </div>
+          <div class="w-full h-2 bg-slate-900 rounded-full overflow-hidden mb-2">
+            <div id="supernovaBar" class="h-full bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 transition-all duration-150" style="width: 0%"></div>
+          </div>
+          <button id="btnTriggerSupernova" class="w-full py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-slate-950 font-black text-xs shadow-lg transition transform active:scale-95">
+            💥 引爆【超新星爆发】突破铁峰顶 → 飞升重元素铀娘时代！
+          </button>
+        </div>
+
+        <!-- Stage 3 Specific: Hardcore Physics Mechanics Status Panel -->
+        <div id="fissionMechanicsPanel" class="glass-panel rounded-xl p-2.5 border border-emerald-500/50 hidden flex-col gap-1.5">
+          <div class="text-[11px] font-bold text-emerald-300 flex items-center justify-between">
+            <span>☢️ 核物理硬核机制监控</span>
+            <span id="kEffBadge" class="font-mono text-xs px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-600/50">k_eff = 1.00 (临界)</span>
+          </div>
+          <div class="grid grid-cols-3 gap-1.5 text-[11px]">
+            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/70">
+              <div class="text-slate-400 text-[10px]">库仑势垒状态</div>
+              <div id="coulombStatus" class="font-bold text-amber-300 truncate">带电H⁺ (会被铀娘弹飞)</div>
+            </div>
+            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/70">
+              <div class="text-slate-400 text-[10px]">场上快/热中子</div>
+              <div id="neutronCountText" class="font-bold font-mono text-cyan-300">0 快 / 0 热</div>
+            </div>
+            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/70">
+              <div class="text-slate-400 text-[10px]">控制棒风纪委员</div>
+              <div id="controlRodText" class="font-bold text-purple-300">0 名巡逻中</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top-Right Live Waifu / Kill Feed Toast -->
+      <div id="toastFeed" class="absolute top-3 right-3 z-10 pointer-events-none flex flex-col items-end gap-1.5 max-w-xs"></div>
+
+      <!-- Bottom Action Dock (Interactive Skills & Bug-Fix Mechanics) -->
+      <div class="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 w-[96%] max-w-3xl pointer-events-auto">
+        <div class="glass-panel rounded-2xl p-2 sm:p-2.5 border border-slate-700/80 shadow-2xl flex flex-wrap items-center justify-between gap-2">
+          <!-- Skill 1: Quantum Dash / Bond Pulse -->
+          <button id="btnSkillDash" class="flex-1 min-w-[115px] py-2 px-2.5 rounded-xl bg-slate-800/90 hover:bg-cyan-950/90 border border-cyan-500/40 flex items-center gap-2 transition active:scale-95 text-left">
+            <span class="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-base shrink-0">⚡</span>
+            <div class="overflow-hidden">
+              <div class="text-xs font-bold text-cyan-200 truncate">量子隧穿冲刺 [Space]</div>
+              <div id="dashCooldownText" class="text-[10px] text-slate-400 truncate">强行突破斥力贴贴 (就绪)</div>
+            </div>
+          </button>
+
+          <!-- Skill 2: Inverse Beta Decay / D-T Neutron Gun (Fixes Bug #1: Coulomb Barrier) -->
+          <button id="btnSkillNeutron" class="flex-1 min-w-[130px] py-2 px-2.5 rounded-xl bg-slate-800/90 hover:bg-amber-950/90 border border-amber-500/40 flex items-center gap-2 transition active:scale-95 text-left">
+            <span class="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-400/50 flex items-center justify-center text-base shrink-0">☄️</span>
+            <div class="overflow-hidden">
+              <div class="text-xs font-bold text-amber-200 truncate">逆β转职 / 射中子 [Q]</div>
+              <div id="neutronModeText" class="text-[10px] text-slate-400 truncate">无视铀娘+92e静电护盾</div>
+            </div>
+          </button>
+
+          <!-- Skill 3: Heavy Water Moderator Field (Fixes Bug #2: Fast Neutron Moderation) -->
+          <button id="btnSkillHeavyWater" class="flex-1 min-w-[130px] py-2 px-2.5 rounded-xl bg-slate-800/90 hover:bg-sky-950/90 border border-sky-500/40 flex items-center gap-2 transition active:scale-95 text-left">
+            <span class="w-8 h-8 rounded-lg bg-sky-500/20 border border-sky-400/50 flex items-center justify-center text-base shrink-0">💧</span>
+            <div class="overflow-hidden">
+              <div class="text-xs font-bold text-sky-200 truncate">铺设重水慢化场 [E]</div>
+              <div id="heavyWaterBtnSub" class="text-[10px] text-slate-400 truncate">快中子减速→热中子暴击×100</div>
+            </div>
+          </button>
+
+          <!-- Skill 4: Spawn Uranium Waifu Wave / Instant Climax Test -->
+          <button id="btnSpawnWave" class="py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs border border-emerald-400/50 shadow-lg transition active:scale-95 flex items-center gap-1.5 shrink-0">
+            <span>☢️</span>
+            <span id="spawnWaveLabel">空投元素娘潮 [R]</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Roguelike 3-Card Upgrade Modal -->
+  <div id="upgradeModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="glass-panel max-w-2xl w-full rounded-2xl p-5 sm:p-6 border border-cyan-500/50 shadow-2xl">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-black uppercase tracking-widest px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">ROGUELIKE EVOLUTION · 肉鸽进化三选一</span>
+        <span id="upgradeLevelBadge" class="text-sm font-mono font-bold text-amber-300">Lv.2 突破！</span>
+      </div>
+      <h3 class="text-lg sm:text-xl font-black text-white mb-1">选择你的微观物理外挂（流派构筑）</h3>
+      <p class="text-xs text-slate-300 mb-4">每一个选项都对应真实的化学键、核聚变截面或链式反应工程机制：</p>
+      <div id="upgradeCardsContainer" class="grid grid-cols-1 sm:grid-cols-3 gap-3"></div>
+    </div>
+  </div>
+
+  <!-- Element Waifu Codex & Physics Bug-Fix Guide Modal -->
+  <div id="codexModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="glass-panel max-w-3xl w-full max-h-[88vh] rounded-2xl p-5 sm:p-6 border border-indigo-500/50 shadow-2xl flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div>
+          <h3 class="text-lg font-black text-white">📖 元素周期娘图鉴 & 硬核物理机制说明书</h3>
+          <p class="text-xs text-slate-400">“阎王：生死簿怎么成元素周期表了？”——三大科学捉虫机制完全实装</p>
+        </div>
+        <button id="btnCloseCodex" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-600">
+          关闭 ✕
+        </button>
+      </div>
+
+      <div class="overflow-y-auto py-4 space-y-4 pr-1 text-xs leading-relaxed">
+        <!-- 3 Physics Mechanics Table -->
+        <div class="bg-slate-900/90 rounded-xl p-3.5 border border-slate-700/80">
+          <div class="font-bold text-cyan-300 text-sm mb-2">🔬 三大物理硬核捉虫 → 游戏内实装机制</div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+            <div class="p-2.5 rounded-lg bg-slate-950/80 border border-amber-500/30">
+              <div class="font-bold text-amber-300 mb-1">1. 库仑势垒 (+92e 斥力)</div>
+              <p class="text-slate-300">氢核带正电，直接撞铀-235会被静电斥力弹飞！按 <kbd class="px-1 py-0.5 bg-slate-800 rounded text-amber-200">Q</kbd> 启动【逆β衰变转职中子】或发射电中性自由中子，零距离直球命中铀娘！</p>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-950/80 border border-sky-500/30">
+              <div class="font-bold text-sky-300 mb-1">2. 重水慢化剂 (热中子暴击)</div>
+              <p class="text-slate-300">刚裂变飙出的橙色【快中子】速度太快容易直接穿模！按 <kbd class="px-1 py-0.5 bg-slate-800 rounded text-sky-200">E</kbd> 铺设前期合成的【D₂O重水慢化场】，把快中子减速成青色【热中子】，裂变捕获率暴涨百倍！</p>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-950/80 border border-purple-500/30">
+              <div class="font-bold text-purple-300 mb-1">3. 风纪委员·控制棒 (Cd/B)</div>
+              <p class="text-slate-300">镉娘(Cd)与硼娘(B)会展开紫色【中子黑洞】吞噬中子并不生娃，强行打断链式连击！用冲刺撞飞她们或堆高铀娘密度冲破临界！</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Waifu Cards Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5" id="codexGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. SYNTHESIZED SOUND ENGINE (Web Audio API - Zero external audio files)
+    // =========================================================================
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      toggle() {
+        this.enabled = !this.enabled;
+        if (this.enabled) this.init();
+        return this.enabled;
+      }
+      playBond(pitchMult = 1) {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(520 * pitchMult, now);
+        osc.frequency.exponentialRampToValueAtTime(880 * pitchMult, now + 0.14);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.16);
+      }
+      playBounce() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.linearRampToValueAtTime(110, now + 0.18);
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.19);
+      }
+      playModerate() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(980, now);
+        osc.frequency.exponentialRampToValueAtTime(440, now + 0.1);
+        gain.gain.setValueAtTime(0.07, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.11);
+      }
+      playFission(chainGen = 1) {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const baseFreq = Math.min(320 + chainGen * 90, 1600);
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(baseFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, now + 0.09);
+        gain.gain.setValueAtTime(0.11, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.12);
+      }
+      playSupernova() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        [110, 220, 330, 440, 660].forEach((f, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = idx % 2 === 0 ? 'sawtooth' : 'triangle';
+          osc.frequency.setValueAtTime(f, now);
+          osc.frequency.exponentialRampToValueAtTime(f * 0.4, now + 0.75);
+          gain.gain.setValueAtTime(0.09, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.78);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.78);
+        });
+      }
+    }
+
+    const sfx = new SoundEngine();
+
+    // =========================================================================
+    // 2. ELEMENT WAIFU CODEX & STAGE CONFIG DATA
+    // =========================================================================
+    const WAIFU_CODEX = [
+      {
+        symbol: 'H',
+        name: '元气氢娘 (Hydrogen)',
+        charge: '+1e',
+        stage: '阶段一：化学人生',
+        face: '(≧▽≦)',
+        color: '#38bdf8',
+        desc: '宇宙丰度第一的初始幼驯染！手里只有一个孤零零的电子，最喜欢和别的H原子厚乳共享电子组成H₂双人成行。'
+      },
+      {
+        symbol: 'O',
+        name: '温柔氧娘 (Oxygen)',
+        charge: '2缺口',
+        stage: '阶段一：化学人生',
+        face: '(⁄ ⁄•⁄ω⁄•⁄ ⁄)',
+        color: '#60a5fa',
+        desc: '外层缺2个电子的大姐姐，最喜欢拉着两个H原子玩“二女侍一夫”合成水分子(H₂O)，更是后期核反应堆不可或缺的重水慢化剂核心！'
+      },
+      {
+        symbol: 'C',
+        name: '八面玲珑碳娘 (Carbon)',
+        charge: '4共价键',
+        stage: '阶段一/二：碳基与聚变',
+        face: '(✧ω✧)',
+        color: '#a78bfa',
+        desc: '拥有4个共价键槽位的端水大师！能同时牵手4个H合成甲烷(CH₄)，还能在恒星内部开启著名的CNO碳氮氧核聚变循环。'
+      },
+      {
+        symbol: 'Fe-56',
+        name: '叹息之墙·铁娘 (Iron-56)',
+        charge: '+26e',
+        stage: '阶段二：恒星熔炉',
+        face: '(￣^￣)ゞ',
+        color: '#f59e0b',
+        desc: '比结合能峰顶的绝对防御高岭之花！聚变到她为止不再释放能量反而倒贴能量，唯有攒够能量触发【超新星爆发】才能突破她的防线！'
+      },
+      {
+        symbol: 'U-235',
+        name: 'SSR傲娇铀娘 (Uranium-235)',
+        charge: '+92e 库仑护盾',
+        stage: '阶段三：链式割草',
+        face: '(⁄>⁄ ▽ ⁄<⁄)',
+        color: '#34d399',
+        desc: '身怀+92e超强静电护盾的终极SSR重元素美少女！带正电的质子会被她直接弹飞，但只要被减速后的【热中子】钻进身体，就会瞬间裂变成双胞胎钡娘(Ba)与氪娘(Kr)，同时飙出3颗新中子和2亿电子伏特能量！'
+      },
+      {
+        symbol: 'Cd / B',
+        name: '风纪委员·镉娘与硼娘',
+        charge: '中子黑洞',
+        stage: '阶段三：反派精英Boss',
+        face: '(╬▔皿▔)╯',
+        color: '#c084fc',
+        desc: '手持反应堆控制棒的严厉风纪委员！自带超大中子吸收截面，专门吞噬场上的自由中子且绝不生娃，口头禅是“禁止超临界涩涩！”'
+      }
+    ];
+
+    const UPGRADE_POOL = [
+      {
+        id: 'heavy_water_plus',
+        title: '💧 重水漫灌 (D₂O 慢化场强化)',
+        tag: '中子慢化流',
+        desc: '立即补充 +3 团重水储备，且所有重水慢化场半径扩大 +35%，快中子减速为热中子的效率大幅提升！',
+        apply: (st) => {
+          st.waterReserves += 3;
+          st.waterRadiusMult *= 1.35;
+          spawnHeavyWaterField(st.player.x, st.player.y);
+        }
+      },
+      {
+        id: 'dt_fusion_gatling',
+        title: '☄️ 氘氚聚变中子机枪 (D+T→He+n)',
+        tag: '链式弹幕流',
+        desc: '自动周期性向四周发射无视库仑势垒的自由中子，每次裂变额外多飙出 +1 颗新中子（一生四）！',
+        apply: (st) => {
+          st.autoNeutronRate = Math.max(25, st.autoNeutronRate - 22);
+          st.bonusFissionNeutrons += 1;
+        }
+      },
+      {
+        id: 'uranium_enrichment',
+        title: '☢️ 离心机丰度提纯 (U-235 暴涨)',
+        tag: '超临界割草',
+        desc: '场上美少女铀-235刷新密度提升 +50%，并立即在身边空投 8 只高纯度铀娘！',
+        apply: (st) => {
+          st.uraniumSpawnBoost += 0.5;
+          if (st.stage === 3) {
+            for (let i = 0; i < 8; i++) spawnStageEntity(3, 'U235');
+          } else {
+            for (let i = 0; i < 6; i++) spawnStageEntity(st.stage);
+          }
+        }
+      },
+      {
+        id: 'quantum_tunneling',
+        title: '⚡ 伽莫夫量子隧穿效应',
+        tag: '强相互作用',
+        desc: '移动速度提升 +25%，冲刺冷却缩短 35%，恒星聚变与共价键贴贴判定半径扩大 +30%！',
+        apply: (st) => {
+          st.player.speedMult *= 1.25;
+          st.attractRadius += 35;
+        }
+      },
+      {
+        id: 'anti_control_rod',
+        title: '🛡️ 拔出控制棒（风纪委员弱化）',
+        tag: '切尔诺贝利流',
+        desc: '风纪委员镉娘(Cd)的中子吞噬黑洞半径缩小 40%，且你的冲刺可以直接撞碎控制棒爆出海量能量！',
+        apply: (st) => {
+          st.rodShrink *= 0.6;
+        }
+      }
+    ];
+
+    // =========================================================================
+    // 3. GAME STATE & PHYSICS ENTITIES
+    // =========================================================================
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const state = {
+      stage: 1, // 1: Chemistry, 2: Stellar Fusion, 3: Uranium Fission Bullet Hell
+      paused: false,
+      level: 1,
+      exp: 0,
+      expNext: 100,
+      totalEnergyEv: 0,
+      waterReserves: 3,
+      waterRadiusMult: 1.0,
+      autoNeutronRate: 75,
+      bonusFissionNeutrons: 0,
+      uraniumSpawnBoost: 1.0,
+      rodShrink: 1.0,
+      attractRadius: 90,
+      chainCombo: 0,
+      chainTimer: 0,
+      screenShake: 0,
+      supernovaCharge: 0,
+      ironWallReached: false,
+      frame: 0,
+
+      player: {
+        x: 400,
+        y: 300,
+        vx: 0,
+        vy: 0,
+        radius: 22,
+        speedMult: 1.0,
+        dashTimer: 0,
+        dashCooldown: 0,
+        isNeutronForm: false, // Stage 3 toggle: Inverse Beta Decay (uncharged neutron form)
+        neutronFormTimer: 0,
+        symbol: 'H',
+        name: '孤狼氢原子 (H)',
+        subTag: '1p⁺ 1e⁻',
+        bondedH: 0,
+        bondedO: 0,
+        bondedC: 0,
+        fusionIndex: 0, // Stage 2 progression: 0:H, 1:D, 2:He-4, 3:C-12, 4:O-16, 5:Fe-56
+        orbitals: [{ angle: 0, dist: 32, color: '#38bdf8', label: 'e⁻' }]
+      },
+
+      keys: {},
+      pointer: { active: false, x: 0, y: 0 },
+
+      entities: [],       // Floating atoms, nuclei, Uranium-235 waifus, Control rods
+      neutrons: [],       // Fast & Thermal neutrons in Stage 3
+      waterFields: [],    // Heavy Water (D2O) moderator zones
+      particles: [],      // Sparks, shockwaves, explosions
+      floatingTexts: []   // Damage / eV numbers & scientific memes
+    };
+
+    const FUSION_LADDER = [
+      { symbol: 'H⁺', name: '氢核·质子', mass: 1, color: '#38bdf8', tag: 'Z=1 质子' },
+      { symbol: 'D', name: '氘核 (重氢)', mass: 2, color: '#60a5fa', tag: '1p⁺ 1n⁰' },
+      { symbol: 'He-4', name: '氦-4 (α粒子)', mass: 4, color: '#fbbf24', tag: '2p⁺ 2n⁰ (+26.7MeV)' },
+      { symbol: 'C-12', name: '碳-12 (3α过程)', mass: 12, color: '#a78bfa', tag: '6p⁺ 6n⁰ 恒星骨幹' },
+      { symbol: 'O-16', name: '氧-16 (α捕获)', mass: 16, color: '#34d399', tag: '8p⁺ 8n⁰ 恒星熔炉' },
+      { symbol: 'Fe-56', name: '铁-56 (铁峰顶之墙)', mass: 56, color: '#f97316', tag: 'Z=26 聚变终点！' }
+    ];
+
+    // =========================================================================
+    // 4. HELPER & SPAWN FUNCTIONS
+    // =========================================================================
+    function formatEnergy(ev) {
+      if (ev >= 1e12) return (ev / 1e12).toFixed(2) + ' TeV';
+      if (ev >= 1e9) return (ev / 1e9).toFixed(2) + ' GeV';
+      if (ev >= 1e6) return (ev / 1e6).toFixed(2) + ' MeV';
+      if (ev >= 1e3) return (ev / 1e3).toFixed(1) + ' keV';
+      return Math.floor(ev) + ' eV';
+    }
+
+    function addToast(text, borderClass = 'border-cyan-400') {
+      const feed = document.getElementById('toastFeed');
+      if (!feed) return;
+      const item = document.createElement('div');
+      item.className = `glass-panel px-3 py-1.5 rounded-lg border-r-4 ${borderClass} text-xs font-semibold text-slate-100 shadow-lg transition-all duration-300`;
+      item.textContent = text;
+      feed.prepend(item);
+      while (feed.children.length > 4) {
+        feed.removeChild(feed.lastChild);
+      }
+      setTimeout(() => {
+        if (item.parentNode) item.remove();
+      }, 3600);
+    }
+
+    function addFloatingText(x, y, text, color = '#fbbf24', size = 14) {
+      if (state.floatingTexts.length > 75) state.floatingTexts.shift();
+      state.floatingTexts.push({
+        x,
+        y,
+        vy: -1.6 - Math.random() * 1.2,
+        text,
+        color,
+        size,
+        alpha: 1.0,
+        life: 52
+      });
+    }
+
+    function createShockwave(x, y, color = '#38bdf8', maxRadius = 120) {
+      state.particles.push({
+        type: 'ring',
+        x,
+        y,
+        radius: 8,
+        maxRadius,
+        color,
+        alpha: 0.9
+      });
+    }
+
+    function createBurst(x, y, color = '#fbbf24', count = 14) {
+      for (let i = 0; i < count; i++) {
+        if (state.particles.length > 260) state.particles.shift();
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 1.5 + Math.random() * 5.5;
+        state.particles.push({
+          type: 'spark',
+          x,
+          y,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          radius: 2 + Math.random() * 3,
+          color,
+          alpha: 1.0
+        });
+      }
+    }
+
+    function spawnHeavyWaterField(x, y, free = false) {
+      if (!free && state.waterReserves <= 0) {
+        addFloatingText(x, y - 20, '重水储备不足！去阶段一合水或升级肉鸽卡', '#f87171', 13);
+        return;
+      }
+      if (!free) state.waterReserves--;
+      sfx.playModerate();
+      const radius = 115 * state.waterRadiusMult;
+      state.waterFields.push({
+        x,
+        y,
+        radius,
+        life: 900, // 15 seconds
+        maxLife: 900,
+        pulse: 0
+      });
+      addFloatingText(x, y, '💧 D₂O 重水慢化场展开！(快中子→热中子)', '#38bdf8', 14);
+      updateHUD();
+    }
+
+    function spawnNeutron(x, y, angle, isThermal = false, generation = 1) {
+      if (state.neutrons.length > 140) return; // Cap to protect framerate
+      const speed = isThermal ? 3.4 : 9.2; // Fast neutrons are super fast; thermal neutrons are slower & accurate
+      state.neutrons.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        isThermal,
+        generation,
+        life: 260,
+        radius: isThermal ? 6.5 : 4.5
+      });
+    }
+
+    function spawnStageEntity(stage, forcedType = null) {
+      const w = canvas.width || 800;
+      const h = canvas.height || 600;
+      const margin = 40;
+      let x = margin + Math.random() * Math.max(100, w - margin * 2);
+      let y = margin + Math.random() * Math.max(100, h - margin * 2);
+
+      // Keep away from immediate player overlap on random spawn
+      const dx = x - state.player.x;
+      const dy = y - state.player.y;
+      if (Math.hypot(dx, dy) < 110) {
+        x = (state.player.x + w / 2) % w;
+        y = (state.player.y + h / 2) % h;
+      }
+
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.6 + Math.random() * 1.1;
+
+      if (stage === 1) {
+        const roll = Math.random();
+        let type = forcedType || (roll < 0.52 ? 'H' : roll < 0.82 ? 'O' : 'C');
+        const map = {
+          H: { symbol: 'H', name: '野生氢娘', radius: 16, color: '#38bdf8', face: '(・ω・)', ev: 13.6 },
+          O: { symbol: 'O', name: '氧娘姐姐', radius: 23, color: '#60a5fa', face: '(⁄•⁄ω⁄•⁄)', ev: 142 },
+          C: { symbol: 'C', name: '碳娘核心', radius: 25, color: '#a78bfa', face: '(✧ω✧)', ev: 280 }
+        };
+        const cfg = map[type];
+        state.entities.push({
+          type,
+          ...cfg,
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed
+        });
+      } else if (stage === 2) {
+        const roll = Math.random();
+        let type = forcedType || (roll < 0.55 ? 'PROTON' : roll < 0.85 ? 'HE4' : 'C12');
+        const map = {
+          PROTON: { symbol: 'p⁺', name: '高温质子', radius: 16, color: '#38bdf8', face: '(>皿<)', ev: 420000 },
+          HE4: { symbol: 'He-4', name: '氦核娘', radius: 22, color: '#fbbf24', face: '(≧∇≦)', ev: 2670000 },
+          C12: { symbol: 'C-12', name: '碳核娘', radius: 26, color: '#f472b6', face: '(☆▽☆)', ev: 7270000 }
+        };
+        const cfg = map[type];
+        state.entities.push({
+          type,
+          ...cfg,
+          x,
+          y,
+          vx: Math.cos(angle) * (speed * 1.3),
+          vy: Math.sin(angle) * (speed * 1.3)
+        });
+      } else if (stage === 3) {
+        let type = forcedType;
+        if (!type) {
+          const rodCount = state.entities.filter(e => e.type === 'ROD_CD').length;
+          type = (Math.random() < 0.14 && rodCount < 3) ? 'ROD_CD' : 'U235';
+        }
+        if (type === 'U235') {
+          state.entities.push({
+            type: 'U235',
+            symbol: 'U-235',
+            name: '傲娇铀娘',
+            radius: 26,
+            color: '#34d399',
+            face: '(⁄>⁄▽⁄<⁄)',
+            charge: '+92e',
+            ev: 200000000,
+            x,
+            y,
+            vx: Math.cos(angle) * (speed * 0.75),
+            vy: Math.sin(angle) * (speed * 0.75)
+          });
+        } else if (type === 'ROD_CD') {
+          state.entities.push({
+            type: 'ROD_CD',
+            symbol: Math.random() < 0.5 ? 'Cd-镉' : 'B-硼',
+            name: '风纪委员·控制棒',
+            radius: 28,
+            color: '#c084fc',
+            face: '(╬▔皿▔)',
+            absorbRadius: 95 * state.rodShrink,
+            x,
+            y,
+            vx: Math.cos(angle) * (speed * 0.9),
+            vy: Math.sin(angle) * (speed * 0.9)
+          });
+        }
+      }
+    }
+
+    // =========================================================================
+    // 5. STAGE SWITCHING & PROGRESSION LOGIC
+    // =========================================================================
+    function switchStage(targetStage) {
+      state.stage = targetStage;
+      state.entities = [];
+      state.neutrons = [];
+      state.waterFields = [];
+      state.chainCombo = 0;
+
+      // Update Stage Tab Buttons
+      [1, 2, 3].forEach(n => {
+        const btn = document.getElementById('btnStage' + n);
+        if (n === targetStage) {
+          btn.className = 'px-2 py-1 rounded-md font-semibold transition-all bg-cyan-600 text-white shadow';
+        } else {
+          btn.className = 'px-2 py-1 rounded-md font-semibold transition-all text-slate-300 hover:text-white';
+        }
+      });
+
+      const badge = document.getElementById('stageBadge');
+      const title = document.getElementById('stageTitle');
+      const desc = document.getElementById('stageDesc');
+      const objLabel = document.getElementById('stageObjectiveLabel');
+      const ironPanel = document.getElementById('ironWallPanel');
+      const fissionPanel = document.getElementById('fissionMechanicsPanel');
+      const spawnLabel = document.getElementById('spawnWaveLabel');
+
+      ironPanel.classList.add('hidden');
+      fissionPanel.classList.add('hidden');
+      fissionPanel.classList.remove('flex');
+
+      if (targetStage === 1) {
+        badge.textContent = 'STAGE 1 · 化学人生';
+        badge.className = 'text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300';
+        title.textContent = '新手村：共享电子大乱斗';
+        desc.innerHTML = '靠近 <span class="text-cyan-300 font-semibold">H原子</span> 厚乳合体成H₂，勾搭 <span class="text-sky-300 font-semibold">氧娘(O)</span> 合成 <span class="text-sky-200 font-semibold">水(H₂O)</span> 攒慢化剂，勾搭 <span class="text-purple-300 font-semibold">碳娘(C)</span> 走碳基飞升！';
+        objLabel.textContent = '阶段一：收集共价键合成 H₂O 与 CH₄';
+        spawnLabel.textContent = '空投氢氧碳娘 [R]';
+        state.player.isNeutronForm = false;
+        updatePlayerIdentityStage1();
+        for (let i = 0; i < 16; i++) spawnStageEntity(1);
+        addToast('🌱 进入【阶段一：化学人生】！快去厚乳H原子、勾搭氧娘合成H₂O吧！', 'border-cyan-400');
+      } else if (targetStage === 2) {
+        badge.textContent = 'STAGE 2 · 恒星熔炉';
+        badge.className = 'text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-300';
+        title.textContent = '中期渡劫：强相互作用·合成大西瓜';
+        desc.innerHTML = '已脱去电子外衣进入恒星内核！利用 <span class="text-amber-300 font-semibold">量子隧穿</span> 融合质子，一路从 <span class="text-amber-200 font-semibold">He-4 → C-12 → O-16</span> 合体到绝望的 <span class="text-orange-400 font-semibold">铁峰顶之墙(Fe-56)</span>！';
+        objLabel.textContent = '阶段二：聚变冲击 Fe-56 并引爆超新星';
+        spawnLabel.textContent = '空投恒星原子核 [R]';
+        ironPanel.classList.remove('hidden');
+        state.player.isNeutronForm = false;
+        updatePlayerIdentityStage2();
+        for (let i = 0; i < 16; i++) spawnStageEntity(2);
+        addToast('☀️ 进入【阶段二：恒星熔炉】！脱掉电子外衣，开启核聚变清屏AOE！', 'border-amber-400');
+      } else if (targetStage === 3) {
+        badge.textContent = 'STAGE 3 · 链式反应割草';
+        badge.className = 'text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300';
+        title.textContent = '大后期：美少女铀-235与中子弹幕';
+        desc.innerHTML = '注意：带正电直接撞 <span class="text-emerald-300 font-semibold">铀娘(U-235)</span> 会被 <span class="text-amber-300 font-semibold">+92e库仑势垒弹飞</span>！按 <span class="text-sky-300 font-semibold">[E]铺重水慢化场</span> + <span class="text-amber-300 font-semibold">[Q]射中子/转职中子</span> 触发一生三链式核爆！';
+        objLabel.textContent = '阶段三：重水慢化热中子，触发U-235链式割草！';
+        spawnLabel.textContent = '空投SSR铀娘群 [R]';
+        fissionPanel.classList.remove('hidden');
+        fissionPanel.classList.add('flex');
+        state.player.symbol = 'D-T';
+        state.player.name = '聚变中子源核心';
+        state.player.subTag = '可转职n⁰ / 射中子';
+        // Spawn initial Heavy Water zone + Uranium Waifus + 1 Control Rod
+        spawnHeavyWaterField(state.player.x, state.player.y, true);
+        for (let i = 0; i < 14; i++) spawnStageEntity(3, 'U235');
+        spawnStageEntity(3, 'ROD_CD');
+        addToast('☢️ 进入【阶段三：美少女铀与中子弹幕】！已自动为你展开首团 D₂O 重水慢化场！', 'border-emerald-400');
+      }
+
+      updateHUD();
+    }
+
+    function updatePlayerIdentityStage1() {
+      const p = state.player;
+      if (p.bondedC > 0 && p.bondedH >= 4) {
+        p.symbol = 'CH₄';
+        p.name = '甲烷四重奏 (碳基初醒)';
+        p.subTag = `${p.bondedC}C + ${p.bondedH}H 共价贴贴`;
+      } else if (p.bondedO > 0 && p.bondedH >= 2) {
+        p.symbol = 'H₂O';
+        p.name = '水分子后宫团 (二女侍一夫)';
+        p.subTag = `已储备 ${state.waterReserves} 团重水`;
+      } else if (p.bondedH >= 1) {
+        p.symbol = 'H₂';
+        p.name = '双人成行氢气 (H₂)';
+        p.subTag = '共价键共享电子对';
+      } else {
+        p.symbol = 'H';
+        p.name = '孤狼氢原子 (H)';
+        p.subTag = '1p⁺ 1e⁻';
+      }
+    }
+
+    function updatePlayerIdentityStage2() {
+      const p = state.player;
+      const step = FUSION_LADDER[Math.min(p.fusionIndex, FUSION_LADDER.length - 1)];
+      p.symbol = step.symbol;
+      p.name = step.name;
+      p.subTag = step.tag;
+      const pct = Math.min(100, Math.round((state.supernovaCharge / 100) * 100));
+      document.getElementById('supernovaPct').textContent = pct + '%';
+      document.getElementById('supernovaBar').style.width = pct + '%';
+    }
+
+    function gainExpAndEnergy(evAmount, expAmount) {
+      state.totalEnergyEv += evAmount;
+      state.exp += expAmount;
+      if (state.exp >= state.expNext) {
+        state.exp -= state.expNext;
+        state.level += 1;
+        state.expNext = Math.round(state.expNext * 1.35);
+        openUpgradeModal();
+      }
+      updateHUD();
+    }
+
+    function triggerSupernovaBurst() {
+      sfx.playSupernova();
+      state.screenShake = 26;
+      createShockwave(state.player.x, state.player.y, '#fbbf24', 650);
+      createShockwave(state.player.x, state.player.y, '#f43f5e', 450);
+      createBurst(state.player.x, state.player.y, '#fbbf24', 50);
+      addFloatingText(state.player.x, state.player.y - 30, '💥 超新星爆发！突破铁峰顶，重元素铀-235诞生！', '#fbbf24', 18);
+      state.totalEnergyEv += 1e9;
+      setTimeout(() => {
+        switchStage(3);
+      }, 650);
+    }
+
+    function triggerUraniumFission(uEntity, neutron, indexInEntities) {
+      // Remove Uranium-235 entity
+      state.entities.splice(indexInEntities, 1);
+
+      state.chainCombo += 1;
+      state.chainTimer = 150;
+      sfx.playFission(state.chainCombo);
+      state.screenShake = Math.min(18, 4 + state.chainCombo * 0.8);
+
+      // Visual explosion + Daughter Nuclei (Ba-141 & Kr-92 tsundere twins)
+      createShockwave(uEntity.x, uEntity.y, '#34d399', 95);
+      createBurst(uEntity.x, uEntity.y, '#34d399', 16);
+
+      const evGain = 200000000 * (1 + state.chainCombo * 0.25);
+      addFloatingText(
+        uEntity.x,
+        uEntity.y - 16,
+        `💥 裂变 x${state.chainCombo}! +${formatEnergy(evGain)} (生出钡娘Ba+氪娘Kr)`,
+        '#34d399',
+        Math.min(20, 13 + Math.floor(state.chainCombo / 3))
+      );
+
+      // Spawn 2~3 (+bonus) new Fast Neutrons shooting out in all directions!
+      const newCount = 3 + state.bonusFissionNeutrons;
+      const baseAngle = Math.random() * Math.PI * 2;
+      for (let i = 0; i < newCount; i++) {
+        const spread = baseAngle + (i * (Math.PI * 2)) / newCount + (Math.random() - 0.5) * 0.35;
+        // Check if born inside a Heavy Water field — if so, immediately moderate or moderate quickly!
+        spawnNeutron(uEntity.x, uEntity.y, spread, false, (neutron ? neutron.generation : 1) + 1);
+      }
+
+      gainExpAndEnergy(evGain, 18);
+
+      // Respawn new U-235 slightly later to sustain chain reaction fun
+      if (state.entities.filter(e => e.type === 'U235').length < 18) {
+        setTimeout(() => {
+          if (state.stage === 3 && !state.paused) spawnStageEntity(3, 'U235');
+        }, 450);
+      }
+    }
+
+    // =========================================================================
+    // 6. MAIN UPDATE LOOP
+    // =========================================================================
+    function updateGame() {
+      if (state.paused) return;
+      state.frame++;
+
+      const w = canvas.width;
+      const h = canvas.height;
+      const p = state.player;
+
+      // 1. Player Movement (Keyboard WASD/Arrows or Pointer drag)
+      let ax = 0;
+      let ay = 0;
+      if (state.keys['KeyW'] || state.keys['ArrowUp']) ay -= 1;
+      if (state.keys['KeyS'] || state.keys['ArrowDown']) ay += 1;
+      if (state.keys['KeyA'] || state.keys['ArrowLeft']) ax -= 1;
+      if (state.keys['KeyD'] || state.keys['ArrowRight']) ax += 1;
+
+      if (state.pointer.active) {
+        const dx = state.pointer.x - p.x;
+        const dy = state.pointer.y - p.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist > 8) {
+          ax = dx / dist;
+          ay = dy / dist;
+        }
+      } else if (ax !== 0 || ay !== 0) {
+        const len = Math.hypot(ax, ay);
+        ax /= len;
+        ay /= len;
+      }
+
+      const dashBoost = p.dashTimer > 0 ? 2.6 : 1.0;
+      const maxSpeed = 4.5 * p.speedMult * dashBoost;
+      p.vx = p.vx * 0.82 + ax * maxSpeed * 0.32;
+      p.vy = p.vy * 0.82 + ay * maxSpeed * 0.32;
+      p.x = Math.max(p.radius, Math.min(w - p.radius, p.x + p.vx));
+      p.y = Math.max(p.radius, Math.min(h - p.radius, p.y + p.vy));
+
+      if (p.dashTimer > 0) p.dashTimer--;
+      if (p.dashCooldown > 0) p.dashCooldown--;
+      if (p.neutronFormTimer > 0) {
+        p.neutronFormTimer--;
+        if (p.neutronFormTimer === 0) {
+          p.isNeutronForm = false;
+          addFloatingText(p.x, p.y - 25, 'β⁻衰变：中子还原为带电质子(H⁺)', '#fbbf24', 12);
+          updateHUD();
+        }
+      }
+
+      // Rotate player orbitals
+      p.orbitals.forEach((orb, idx) => {
+        orb.angle += 0.065 + idx * 0.015;
+      });
+
+      // Stage 3 Auto D-T Fusion Neutron Emitter
+      if (state.stage === 3 && state.frame % state.autoNeutronRate === 0) {
+        // Aim at nearest U-235 or random angle
+        let targetAngle = Math.random() * Math.PI * 2;
+        let minDist = Infinity;
+        state.entities.forEach(e => {
+          if (e.type === 'U235') {
+            const d = Math.hypot(e.x - p.x, e.y - p.y);
+            if (d < minDist) {
+              minDist = d;
+              targetAngle = Math.atan2(e.y - p.y, e.x - p.x);
+            }
+          }
+        });
+        spawnNeutron(p.x, p.y, targetAngle, false, 1);
+      }
+
+      // Maintain minimum entities per stage
+      const minCount = state.stage === 3 ? Math.round(14 * state.uraniumSpawnBoost) : 15;
+      if (state.entities.length < minCount && state.frame % 25 === 0) {
+        spawnStageEntity(state.stage);
+      }
+
+      // Update Heavy Water Moderator Fields
+      for (let i = state.waterFields.length - 1; i >= 0; i--) {
+        const wf = state.waterFields[i];
+        wf.life--;
+        wf.pulse += 0.05;
+        if (wf.life <= 0) state.waterFields.splice(i, 1);
+      }
+
+      // Update Neutrons (Stage 3 core bullet-hell logic)
+      for (let i = state.neutrons.length - 1; i >= 0; i--) {
+        const n = state.neutrons[i];
+        n.x += n.vx;
+        n.y += n.vy;
+        n.life--;
+
+        // Bounce off screen edges once or twice so screen stays packed with action
+        if (n.x < 10 || n.x > w - 10) n.vx *= -1;
+        if (n.y < 10 || n.y > h - 10) n.vy *= -1;
+
+        // Check if Fast Neutron enters a Heavy Water (D2O) Moderator Field!
+        if (!n.isThermal) {
+          for (let j = 0; j < state.waterFields.length; j++) {
+            const wf = state.waterFields[j];
+            if (Math.hypot(n.x - wf.x, n.y - wf.y) < wf.radius) {
+              n.isThermal = true;
+              // Slow down fast neutron (20,000 km/s -> 2.2 km/s thermal neutron)
+              n.vx *= 0.38;
+              n.vy *= 0.38;
+              n.radius = 6.5;
+              sfx.playModerate();
+              createBurst(n.x, n.y, '#38bdf8', 5);
+              if (Math.random() < 0.35) {
+                addFloatingText(n.x, n.y - 10, '💧重水慢化→热中子(暴击×100)', '#38bdf8', 11);
+              }
+              break;
+            }
+          }
+        }
+
+        // Check if Neutron is sucked into a Control Rod Boss (Cd / B)!
+        let absorbedByRod = false;
+        for (let r = 0; r < state.entities.length; r++) {
+          const ent = state.entities[r];
+          if (ent.type === 'ROD_CD') {
+            const distRod = Math.hypot(n.x - ent.x, n.y - ent.y);
+            if (distRod < ent.absorbRadius) {
+              // Pull neutron toward Control Rod black hole
+              n.vx += ((ent.x - n.x) / distRod) * 0.9;
+              n.vy += ((ent.y - n.y) / distRod) * 0.9;
+              if (distRod < ent.radius + 8) {
+                absorbedByRod = true;
+                createBurst(n.x, n.y, '#c084fc', 6);
+                if (Math.random() < 0.4) {
+                  addFloatingText(ent.x, ent.y - 24, '🚫 风纪委员吞噬中子！禁止涩涩！', '#c084fc', 12);
+                }
+                break;
+              }
+            }
+          }
+        }
+
+        if (absorbedByRod || n.life <= 0) {
+          state.neutrons.splice(i, 1);
+          continue;
+        }
+
+        // Check collision with Uranium-235 Waifus!
+        for (let k = state.entities.length - 1; k >= 0; k--) {
+          const ent = state.entities[k];
+          if (ent.type === 'U235') {
+            const d = Math.hypot(n.x - ent.x, n.y - ent.y);
+            // Thermal neutrons have a generous capture cross-section (100% capture);
+            // Fast neutrons have tiny cross-section and 80% chance to phase right through ("穿模")!
+            const hitRadius = n.isThermal ? ent.radius + n.radius + 10 : ent.radius * 0.65;
+            if (d < hitRadius) {
+              if (n.isThermal || Math.random() < 0.18) {
+                state.neutrons.splice(i, 1);
+                triggerUraniumFission(ent, n, k);
+                break;
+              } else {
+                // Fast neutron穿模 (Passed right through without capture!)
+                if (Math.random() < 0.35) {
+                  addFloatingText(ent.x, ent.y - 20, '⚡快中子太快穿模！需铺D₂O重水慢化！', '#fb923c', 12);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Update Entities & Player Collisions
+      for (let i = state.entities.length - 1; i >= 0; i--) {
+        const e = state.entities[i];
+        e.x += e.vx;
+        e.y += e.vy;
+
+        if (e.x < e.radius || e.x > w - e.radius) e.vx *= -1;
+        if (e.y < e.radius || e.y > h - e.radius) e.vy *= -1;
+
+        const dist = Math.hypot(p.x - e.x, p.y - e.y);
+
+        // Gentle covalent attraction when player is close in Stage 1 & 2
+        if (state.stage !== 3 && dist < state.attractRadius) {
+          e.x += ((p.x - e.x) / dist) * 1.4;
+          e.y += ((p.y - e.y) / dist) * 1.4;
+        }
+
+        // Thermal neutrons gently curve toward U-235 in Stage 3 (representing massive 585-barn cross section!)
+        if (state.stage === 3 && e.type === 'U235') {
+          state.neutrons.forEach(n => {
+            if (n.isThermal) {
+              const nd = Math.hypot(e.x - n.x, e.y - n.y);
+              if (nd < 110 && nd > 1) {
+                n.vx += ((e.x - n.x) / nd) * 0.35;
+                n.vy += ((e.y - n.y) / nd) * 0.35;
+              }
+            }
+          });
+        }
+
+        // Player Direct Collision with Entity
+        if (dist < p.radius + e.radius) {
+          if (state.stage === 1) {
+            // Stage 1: Covalent Bonding!
+            sfx.playBond(1 + (p.orbitals.length % 5) * 0.12);
+            createBurst(e.x, e.y, e.color, 10);
+            if (e.type === 'H') {
+              p.bondedH++;
+              if (p.orbitals.length < 10) {
+                p.orbitals.push({ angle: Math.random() * 6.28, dist: 30 + (p.orbitals.length % 3) * 8, color: '#38bdf8', label: 'H' });
+              }
+              addFloatingText(e.x, e.y, '💕 厚乳H原子！共享电子对 +13.6 eV', '#38bdf8', 13);
+            } else if (e.type === 'O') {
+              p.bondedO++;
+              state.waterReserves += 1;
+              if (p.orbitals.length < 10) {
+                p.orbitals.push({ angle: Math.random() * 6.28, dist: 38, color: '#60a5fa', label: 'O' });
+              }
+              addFloatingText(e.x, e.y, '💧 勾搭氧娘合成H₂O！重水储备 +1', '#60a5fa', 15);
+            } else if (e.type === 'C') {
+              p.bondedC++;
+              if (p.orbitals.length < 10) {
+                p.orbitals.push({ angle: Math.random() * 6.28, dist: 44, color: '#a78bfa', label: 'C' });
+              }
+              addFloatingText(e.x, e.y, '🧬 碳娘四重奏 CH₄！碳链飞升 +280 eV', '#a78bfa', 15);
+            }
+            updatePlayerIdentityStage1();
+            gainExpAndEnergy(e.ev, 24);
+            state.entities.splice(i, 1);
+
+            // Auto-prompt or advance to Stage 2 once enough molecules formed
+            if (p.bondedH + p.bondedO + p.bondedC >= 12 && state.stage === 1) {
+              addToast('🔥 化学键已满载！正在跳入恒星内核开启【阶段二：核聚变】！', 'border-amber-400');
+              setTimeout(() => {
+                if (state.stage === 1) switchStage(2);
+              }, 900);
+            }
+          } else if (state.stage === 2) {
+            // Stage 2: Stellar Nuclear Fusion
+            if (p.fusionIndex < FUSION_LADDER.length - 1) {
+              p.fusionIndex++;
+            }
+            sfx.playBond(0.8 + p.fusionIndex * 0.15);
+            createShockwave(e.x, e.y, e.color, 130);
+            createBurst(e.x, e.y, e.color, 18);
+
+            if (p.fusionIndex >= FUSION_LADDER.length - 1) {
+              // Reached Fe-56 Iron Peak Wall!
+              state.ironWallReached = true;
+              state.supernovaCharge = Math.min(100, state.supernovaCharge + 25);
+              addFloatingText(e.x, e.y, '🧱 撞上铁峰顶(Fe-56)！聚变倒贴能量，超新星充能 +25%！', '#f97316', 14);
+              if (state.supernovaCharge >= 100) {
+                triggerSupernovaBurst();
+              }
+            } else {
+              const step = FUSION_LADDER[p.fusionIndex];
+              addFloatingText(e.x, e.y, `☀️ 量子隧穿聚变 → ${step.name}! +${formatEnergy(e.ev)}`, '#fbbf24', 15);
+              state.supernovaCharge = Math.min(100, state.supernovaCharge + 18);
+            }
+            updatePlayerIdentityStage2();
+            gainExpAndEnergy(e.ev, 28);
+            state.entities.splice(i, 1);
+          } else if (state.stage === 3) {
+            // Stage 3: Uranium-235 & Control Rods
+            if (e.type === 'U235') {
+              if (p.isNeutronForm || p.dashTimer > 0) {
+                // Player transformed into uncharged Neutron (Inverse Beta Decay) -> Direct Zero-Distance Fission!
+                triggerUraniumFission(e, { generation: 1 }, i);
+              } else {
+                // BUG #1 MECHANIC: Positive Proton repelled by U-235's +92e Coulomb Barrier!
+                sfx.playBounce();
+                const repelAngle = Math.atan2(p.y - e.y, p.x - e.x);
+                p.vx = Math.cos(repelAngle) * 11;
+                p.vy = Math.sin(repelAngle) * 11;
+                createShockwave(e.x, e.y, '#fbbf24', 55);
+                addFloatingText(
+                  e.x,
+                  e.y - 22,
+                  '🛡️ 同性相斥！被铀娘+92e库仑势垒弹飞！(按Q转职中子/射中子)',
+                  '#fbbf24',
+                  13
+                );
+              }
+            } else if (e.type === 'ROD_CD') {
+              if (p.dashTimer > 0 || p.isNeutronForm) {
+                // Rammed and destroyed Control Rod Boss!
+                sfx.playFission(4);
+                createShockwave(e.x, e.y, '#c084fc', 140);
+                createBurst(e.x, e.y, '#c084fc', 24);
+                addFloatingText(e.x, e.y, '💥 撞飞风纪委员控制棒！反应堆超临界解放！', '#c084fc', 15);
+                state.entities.splice(i, 1);
+                gainExpAndEnergy(50000000, 35);
+              } else {
+                const repelAngle = Math.atan2(p.y - e.y, p.x - e.x);
+                p.vx = Math.cos(repelAngle) * 8;
+                p.vy = Math.sin(repelAngle) * 8;
+                addFloatingText(e.x, e.y - 20, '💢 风纪委员镉娘：禁止贴贴！(按Space冲刺撞碎她)', '#c084fc', 12);
+              }
+            }
+          }
+        }
+      }
+
+      // Decay chain reaction combo timer
+      if (state.chainTimer > 0) {
+        state.chainTimer--;
+        if (state.chainTimer === 0) state.chainCombo = 0;
+      }
+
+      if (state.screenShake > 0) state.screenShake *= 0.86;
+      if (state.screenShake < 0.4) state.screenShake = 0;
+
+      // Update Particles & Floating Texts
+      for (let i = state.particles.length - 1; i >= 0; i--) {
+        const pt = state.particles[i];
+        if (pt.type === 'ring') {
+          pt.radius += (pt.maxRadius - pt.radius) * 0.16;
+          pt.alpha -= 0.045;
+        } else {
+          pt.x += pt.vx;
+          pt.y += pt.vy;
+          pt.vx *= 0.94;
+          pt.vy *= 0.94;
+          pt.alpha -= 0.032;
+        }
+        if (pt.alpha <= 0.02) state.particles.splice(i, 1);
+      }
+
+      for (let i = state.floatingTexts.length - 1; i >= 0; i--) {
+        const ft = state.floatingTexts[i];
+        ft.y += ft.vy;
+        ft.life--;
+        ft.alpha = Math.min(1, ft.life / 20);
+        if (ft.life <= 0) state.floatingTexts.splice(i, 1);
+      }
+
+      if (state.frame % 12 === 0) updateHUD();
+    }
+
+    // =========================================================================
+    // 7. RENDER ENGINE (Canvas 2D)
+    // =========================================================================
+    function drawGame() {
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.save();
+
+      // Screen shake effect during nuclear fission / supernova
+      if (state.screenShake > 0) {
+        const sx = (Math.random() - 0.5) * state.screenShake;
+        const sy = (Math.random() - 0.5) * state.screenShake;
+        ctx.translate(sx, sy);
+      }
+
+      // 1. Stage-themed Background
+      const bgGrad = ctx.createRadialGradient(w * 0.5, h * 0.5, 40, w * 0.5, h * 0.5, Math.max(w, h) * 0.75);
+      if (state.stage === 1) {
+        bgGrad.addColorStop(0, '#09192f');
+        bgGrad.addColorStop(1, '#040814');
+      } else if (state.stage === 2) {
+        bgGrad.addColorStop(0, '#2b1208');
+        bgGrad.addColorStop(1, '#08050d');
+      } else {
+        bgGrad.addColorStop(0, '#07221c');
+        bgGrad.addColorStop(1, '#040911');
+      }
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Subtle Quantum Grid
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.06)';
+      ctx.lineWidth = 1;
+      const gridStep = 55;
+      for (let x = 0; x < w; x += gridStep) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      for (let y = 0; y < h; y += gridStep) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      // 2. Draw Heavy Water (D2O) Moderator Fields
+      state.waterFields.forEach(wf => {
+        ctx.save();
+        const r = wf.radius + Math.sin(wf.pulse) * 4;
+        const grad = ctx.createRadialGradient(wf.x, wf.y, r * 0.1, wf.x, wf.y, r);
+        grad.addColorStop(0, 'rgba(56, 189, 248, 0.26)');
+        grad.addColorStop(0.75, 'rgba(14, 165, 233, 0.12)');
+        grad.addColorStop(1, 'rgba(14, 165, 233, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(wf.x, wf.y, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+        ctx.setLineDash([6, 6]);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(wf.x, wf.y, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = 'rgba(186, 230, 253, 0.75)';
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('💧 D₂O 重水慢化场 (快中子→热中子暴击×100)', wf.x, wf.y - r + 16);
+        ctx.restore();
+      });
+
+      // 3. Draw Particles & Shockwaves
+      state.particles.forEach(pt => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, pt.alpha);
+        if (pt.type === 'ring') {
+          ctx.strokeStyle = pt.color;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = pt.color;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+
+      // 4. Draw Entities (Atoms, Fusion Nuclei, Uranium-235 Waifus, Control Rod Bosses)
+      state.entities.forEach(e => {
+        ctx.save();
+
+        // Special Aura for Uranium-235 (+92e Coulomb Barrier)
+        if (e.type === 'U235') {
+          ctx.strokeStyle = 'rgba(251, 191, 36, 0.45)';
+          ctx.setLineDash([4, 4]);
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(e.x, e.y, e.radius + 9, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // Special Aura for Control Rod Boss (Neutron Black Hole)
+        if (e.type === 'ROD_CD') {
+          const rodGrad = ctx.createRadialGradient(e.x, e.y, 8, e.x, e.y, e.absorbRadius);
+          rodGrad.addColorStop(0, 'rgba(192, 132, 252, 0.35)');
+          rodGrad.addColorStop(1, 'rgba(88, 28, 135, 0)');
+          ctx.fillStyle = rodGrad;
+          ctx.beginPath();
+          ctx.arc(e.x, e.y, e.absorbRadius, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = 'rgba(192, 132, 252, 0.55)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(e.x, e.y, e.absorbRadius, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Glowing Orb Body
+        ctx.shadowColor = e.color;
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = e.color;
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Anime Blush Cheeks
+        ctx.fillStyle = 'rgba(244, 63, 94, 0.45)';
+        ctx.beginPath();
+        ctx.arc(e.x - e.radius * 0.45, e.y + 3, 3.5, 0, Math.PI * 2);
+        ctx.arc(e.x + e.radius * 0.45, e.y + 3, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Symbol & Expression
+        ctx.fillStyle = '#0f172a';
+        ctx.font = '900 12px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(e.symbol, e.x, e.y - 2);
+
+        ctx.font = 'bold 10px Inter, sans-serif';
+        ctx.fillText(e.face, e.x, e.y + 10);
+
+        // Name Tag Below
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = '600 11px Inter, sans-serif';
+        ctx.fillText(e.name, e.x, e.y + e.radius + 13);
+        ctx.restore();
+      });
+
+      // 5. Draw Neutrons (Stage 3 Fast vs Thermal Neutrons)
+      state.neutrons.forEach(n => {
+        ctx.save();
+        const col = n.isThermal ? '#22d3ee' : '#fb923c';
+        ctx.shadowColor = col;
+        ctx.shadowBlur = n.isThermal ? 12 : 6;
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Velocity trail
+        ctx.strokeStyle = col;
+        ctx.globalAlpha = 0.45;
+        ctx.lineWidth = n.isThermal ? 3 : 2;
+        ctx.beginPath();
+        ctx.moveTo(n.x, n.y);
+        ctx.lineTo(n.x - n.vx * 2.5, n.y - n.vy * 2.5);
+        ctx.stroke();
+
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 9px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(n.isThermal ? '热n⁰' : '快n⁰', n.x, n.y - 8);
+        ctx.restore();
+      });
+
+      // 6. Draw Player
+      const p = state.player;
+      ctx.save();
+
+      // Orbitals (Stage 1 covalent electrons & bonded atoms)
+      if (state.stage === 1) {
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 34, 0, Math.PI * 2);
+        ctx.stroke();
+
+        p.orbitals.forEach(orb => {
+          const ox = p.x + Math.cos(orb.angle) * orb.dist;
+          const oy = p.y + Math.sin(orb.angle) * orb.dist;
+          ctx.fillStyle = orb.color;
+          ctx.beginPath();
+          ctx.arc(ox, oy, 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#0f172a';
+          ctx.font = 'bold 8px Inter, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(orb.label, ox, oy + 3);
+        });
+      }
+
+      // Player Core Aura
+      const playerColor = p.isNeutronForm
+        ? '#22d3ee'
+        : state.stage === 1
+        ? '#38bdf8'
+        : state.stage === 2
+        ? '#fbbf24'
+        : '#10b981';
+
+      ctx.shadowColor = playerColor;
+      ctx.shadowBlur = p.dashTimer > 0 ? 28 : 18;
+      ctx.fillStyle = playerColor;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // White inner rim
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Player Expression & Symbol
+      ctx.fillStyle = '#020617';
+      ctx.font = '900 13px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.isNeutronForm ? 'n⁰中子态' : p.symbol, p.x, p.y - 2);
+      ctx.font = 'bold 10px Inter, sans-serif';
+      ctx.fillText(p.isNeutronForm ? '(✧∀✧)' : '(≧▽≦)', p.x, p.y + 11);
+
+      ctx.restore();
+
+      // 7. Draw Floating Damage / Physics Meme Texts
+      state.floatingTexts.forEach(ft => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, ft.alpha);
+        ctx.font = `900 ${ft.size}px Inter, 'Noto Sans SC', sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.strokeStyle = 'rgba(2, 6, 23, 0.9)';
+        ctx.lineWidth = 3.5;
+        ctx.strokeText(ft.text, ft.x, ft.y);
+        ctx.fillStyle = ft.color;
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
+      });
+
+      ctx.restore();
+    }
+
+    // =========================================================================
+    // 8. UI UPDATES & MODALS
+    // =========================================================================
+    function updateHUD() {
+      const p = state.player;
+      document.getElementById('playerAvatarBadge').textContent = p.isNeutronForm ? 'n⁰' : p.symbol.slice(0, 2);
+      document.getElementById('playerStateName').textContent = p.isNeutronForm ? '逆β衰变·自由中子态(n⁰)' : p.name;
+      document.getElementById('playerBondTag').textContent = p.isNeutronForm ? '0电荷·无视库仑势垒' : p.subTag;
+
+      document.getElementById('expText').textContent = `Lv.${state.level} (${Math.floor(state.exp)}/${state.expNext})`;
+      const expPct = Math.min(100, Math.round((state.exp / state.expNext) * 100));
+      document.getElementById('expBar').style.width = expPct + '%';
+
+      document.getElementById('energyCounter').textContent = formatEnergy(state.totalEnergyEv);
+      document.getElementById('waterCounter').textContent = `${state.waterReserves} 团`;
+      document.getElementById('heavyWaterBtnSub').textContent = `剩余 ${state.waterReserves} 团 · 快中子变热中子`;
+
+      const comboEl = document.getElementById('comboCounter');
+      if (state.chainCombo > 1) {
+        comboEl.classList.remove('hidden');
+        comboEl.textContent = `☢️ 链式裂变连击 x${state.chainCombo}`;
+      } else {
+        comboEl.classList.add('hidden');
+      }
+
+      if (state.stage === 3) {
+        const fastCount = state.neutrons.filter(n => !n.isThermal).length;
+        const thermalCount = state.neutrons.filter(n => n.isThermal).length;
+        const rodCount = state.entities.filter(e => e.type === 'ROD_CD').length;
+
+        document.getElementById('coulombStatus').textContent = p.isNeutronForm
+          ? '✅ 中子态n⁰ (零距离直球命中!)'
+          : '⚠️ 带电H⁺ (撞铀娘会被弹飞)';
+        document.getElementById('coulombStatus').className = p.isNeutronForm
+          ? 'font-bold text-emerald-300 truncate'
+          : 'font-bold text-amber-300 truncate';
+
+        document.getElementById('neutronCountText').textContent = `${fastCount} 快 / ${thermalCount} 热`;
+        document.getElementById('controlRodText').textContent = `${rodCount} 名巡逻中`;
+
+        const kEff = (1.0 + thermalCount * 0.14 + state.chainCombo * 0.08 - rodCount * 0.18).toFixed(2);
+        const kBadge = document.getElementById('kEffBadge');
+        kBadge.textContent = `k_eff = ${kEff} (${kEff > 1.2 ? '超临界割草!' : kEff >= 1.0 ? '临界运转' : '亚临界'})`;
+      }
+    }
+
+    function openUpgradeModal() {
+      state.paused = true;
+      const modal = document.getElementById('upgradeModal');
+      const container = document.getElementById('upgradeCardsContainer');
+      document.getElementById('upgradeLevelBadge').textContent = `Lv.${state.level} 量子突破！`;
+      container.innerHTML = '';
+
+      // Pick 3 shuffled upgrades
+      const shuffled = [...UPGRADE_POOL].sort(() => Math.random() - 0.5).slice(0, 3);
+      shuffled.forEach(up => {
+        const card = document.createElement('button');
+        card.className = 'p-4 rounded-xl bg-slate-900/95 hover:bg-slate-800 border border-cyan-500/40 hover:border-cyan-400 text-left flex flex-col justify-between transition transform hover:-translate-y-1 shadow-lg';
+        card.innerHTML = `
+          <div>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700/50">${up.tag}</span>
+            <h4 class="text-sm font-black text-white mt-2 mb-1.5">${up.title}</h4>
+            <p class="text-xs text-slate-300 leading-relaxed">${up.desc}</p>
+          </div>
+          <div class="mt-4 pt-2 border-t border-slate-800 text-xs font-bold text-cyan-300 flex items-center justify-between">
+            <span>立即装配该机制</span>
+            <span>→</span>
+          </div>
+        `;
+        card.addEventListener('click', () => {
+          up.apply(state);
+          sfx.playBond(1.4);
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+          state.paused = false;
+          addToast(`✨ 已解锁肉鸽词条：${up.title}`, 'border-amber-400');
+          updateHUD();
+        });
+        container.appendChild(card);
+      });
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function populateCodex() {
+      const grid = document.getElementById('codexGrid');
+      grid.innerHTML = '';
+      WAIFU_CODEX.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'p-3 rounded-xl bg-slate-900/90 border border-slate-700/80 flex flex-col justify-between';
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="px-2 py-0.5 rounded text-xs font-black text-slate-950" style="background:${item.color}">${item.symbol} ${item.face}</span>
+              <span class="text-[10px] text-slate-400 font-mono">${item.charge}</span>
+            </div>
+            <div class="font-bold text-sm text-white mb-1">${item.name}</div>
+            <p class="text-xs text-slate-300 leading-relaxed">${item.desc}</p>
+          </div>
+          <div class="mt-2 pt-1.5 border-t border-slate-800/80 text-[10px] text-cyan-300 font-semibold">${item.stage}</div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // =========================================================================
+    // 9. INPUT LISTENERS & INITIALIZATION
+    // =========================================================================
+    function actDash() {
+      const p = state.player;
+      if (p.dashCooldown <= 0) {
+        p.dashTimer = 18;
+        p.dashCooldown = 45;
+        sfx.playBond(1.3);
+        createBurst(p.x, p.y, '#38bdf8', 10);
+        addFloatingText(p.x, p.y - 20, '⚡ 量子隧穿冲刺！', '#38bdf8', 13);
+      }
+    }
+
+    function actNeutronSkill() {
+      const p = state.player;
+      if (state.stage !== 3) {
+        switchStage(3);
+      }
+      // Toggle Inverse Beta Decay neutron form AND fire a 6-way volley of neutrons!
+      p.isNeutronForm = true;
+      p.neutronFormTimer = 300; // 5 seconds of uncharged direct-ramming mode
+      sfx.playBond(1.5);
+      for (let i = 0; i < 6; i++) {
+        spawnNeutron(p.x, p.y, (i * Math.PI * 2) / 6, false, 1);
+      }
+      addFloatingText(p.x, p.y - 24, '☄️ 逆β衰变转职【电中性中子n⁰】+ 发射6颗快中子！', '#fbbf24', 14);
+      updateHUD();
+    }
+
+    function actHeavyWaterSkill() {
+      if (state.stage !== 3 && state.waterReserves > 0) {
+        addToast('💧 已在战场铺设 D₂O 重水慢化场（阶段三可减速快中子触发百倍热中子暴击）！', 'border-sky-400');
+      }
+      spawnHeavyWaterField(state.player.x, state.player.y, state.waterReserves <= 0);
+    }
+
+    function actSpawnWave() {
+      sfx.playBond(1.1);
+      for (let i = 0; i < 7; i++) {
+        spawnStageEntity(state.stage, state.stage === 3 ? 'U235' : null);
+      }
+      addFloatingText(state.player.x, state.player.y - 25, '☢️ 元素美少女大军空投抵达！', '#34d399', 15);
+    }
+
+    function resizeCanvas() {
+      const container = document.getElementById('canvasContainer');
+      if (!container) return;
+      canvas.width = container.clientWidth;
+      canvas.height = container.clientHeight;
+      state.player.x = Math.min(Math.max(40, state.player.x), canvas.width - 40);
+      state.player.y = Math.min(Math.max(40, state.player.y), canvas.height - 40);
+      drawGame();
+    }
+
+    window.onload = () => {
+      populateCodex();
+      resizeCanvas();
+      state.player.x = canvas.width / 2;
+      state.player.y = canvas.height / 2;
+      switchStage(1);
+
+      window.addEventListener('resize', resizeCanvas);
+
+      // Keyboard input
+      window.addEventListener('keydown', (e) => {
+        state.keys[e.code] = true;
+        if (e.code === 'Space') {
+          e.preventDefault();
+          actDash();
+        } else if (e.code === 'KeyQ') {
+          actNeutronSkill();
+        } else if (e.code === 'KeyE') {
+          actHeavyWaterSkill();
+        } else if (e.code === 'KeyR') {
+          actSpawnWave();
+        } else if (e.code === 'Digit1') {
+          switchStage(1);
+        } else if (e.code === 'Digit2') {
+          switchStage(2);
+        } else if (e.code === 'Digit3') {
+          switchStage(3);
+        }
+      });
+
+      window.addEventListener('keyup', (e) => {
+        state.keys[e.code] = false;
+      });
+
+      // Pointer / Touch movement on Canvas
+      canvas.addEventListener('pointerdown', (e) => {
+        sfx.init();
+        const rect = canvas.getBoundingClientRect();
+        state.pointer.active = true;
+        state.pointer.x = e.clientX - rect.left;
+        state.pointer.y = e.clientY - rect.top;
+      });
+
+      canvas.addEventListener('pointermove', (e) => {
+        if (!state.pointer.active) return;
+        const rect = canvas.getBoundingClientRect();
+        state.pointer.x = e.clientX - rect.left;
+        state.pointer.y = e.clientY - rect.top;
+      });
+
+      window.addEventListener('pointerup', () => {
+        state.pointer.active = false;
+      });
+
+      // Stage Switch Buttons
+      document.getElementById('btnStage1').addEventListener('click', () => switchStage(1));
+      document.getElementById('btnStage2').addEventListener('click', () => switchStage(2));
+      document.getElementById('btnStage3').addEventListener('click', () => switchStage(3));
+
+      // Bottom Dock Skills
+      document.getElementById('btnSkillDash').addEventListener('click', actDash);
+      document.getElementById('btnSkillNeutron').addEventListener('click', actNeutronSkill);
+      document.getElementById('btnSkillHeavyWater').addEventListener('click', actHeavyWaterSkill);
+      document.getElementById('btnSpawnWave').addEventListener('click', actSpawnWave);
+      document.getElementById('btnTriggerSupernova').addEventListener('click', triggerSupernovaBurst);
+
+      // Modals & Utility Buttons
+      document.getElementById('btnCodex').addEventListener('click', () => {
+        state.paused = true;
+        const modal = document.getElementById('codexModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      });
+
+      document.getElementById('btnCloseCodex').addEventListener('click', () => {
+        const modal = document.getElementById('codexModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        state.paused = false;
+      });
+
+      document.getElementById('btnSound').addEventListener('click', (e) => {
+        const on = sfx.toggle();
+        e.currentTarget.textContent = on ? '🔊 音效' : '🔇 静音';
+      });
+
+      document.getElementById('btnPause').addEventListener('click', (e) => {
+        state.paused = !state.paused;
+        e.currentTarget.textContent = state.paused ? '▶ 继续' : '⏸ 暂停';
+      });
+
+      // Main 60fps Loop
+      function loop() {
+        updateGame();
+        drawGame();
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    };
+  </script>
+</body>
+</html>
